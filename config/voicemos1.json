@@ -1,0 +1,23 @@
+{
+	"Load Data": {
+		"type": "LoadCSVAsDFNode",
+		"children": ["Load Signals"],
+		"output_key": "data",
+		"path_to_csv": "resources/quickstart_tcdvoip.csv"
+	},
+	"Load Signals": {
+    	"type": "LoopNode",
+		"children": ["DF to csv"],
+		"output_key": "dataset_output",
+		"iterable_key": "wav_files",
+		"start_node": "Load Signal",
+		"key_blacklist": [],
+		"node_data": {
+    		"Load Signal": {
+        		"type": "LoadSignalNode",
+        		"children": [],
+        		"output_key": "ref"
+    		}
+		}
+	}
+}

@@ -7,7 +7,10 @@ within this single TransformNode.
 import sys
 import logging
 import pathlib
+import pyvad
+import numpy as np
 
+from nodes.loadsignalnode import load_audio_from_path
 from .node import AQPNode
 from pipeline import LOGGER_NAME
 
@@ -112,14 +115,39 @@ def to_csv(result: dict, target_key: str, output_file_name: str, **kwargs):
     path_to_output_file = output_file_name[:output_file_name.rindex('/') + 1]
     pathlib.Path(path_to_output_file).mkdir(parents=True, exist_ok=True)
     data.to_csv(output_file_name)
+
+
+def apply_function_to_col(result: dict, target_key: str, output_col: str = None, **kwargs):
+    df = result[target_key]
+    modifier_function = SIGNAL_MODIFIERS[kwargs['function_name']]
+    output_column = output_col if output_col else kwargs['signal_col']
+    df[output_column] = df[kwargs['signal_col']].apply(modifier_function, **kwargs)
     
+    
+def scale_by_constant(signal, constant, **kwargs): 
+    return signal * constant
+
+
+def perform_vad(signal, sample_rate, **kwargs): 
+    activity = pyvad.split(signal, sample_rate, fs_vad=sample_rate, hop_length=30, vad_mode=3)
+    return np.concatenate([signal[edge[0]:edge[1]] for edge in activity], axis=0)
+ 
+
+SIGNAL_MODIFIERS = {
+        'scale_by_constant': scale_by_constant,
+        'add_constant': (lambda signal, constant, **kwargs: signal + constant),
+        'load_signal': load_audio_from_path,
+        'VAD': perform_vad
+    }
+
     
 # Used to assign the correct functions during deserialization from JSON.
 FUNCTIONS = {
     'df_columns_to_tuples':  df_columns_to_tuples,
     'tuple_to_top_level': tuple_to_top_level,
     'update_df': update_df,
-    'to_csv':  to_csv
+    'to_csv':  to_csv,
+    "apply_function": apply_function_to_col
 }
 
 

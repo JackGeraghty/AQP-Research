@@ -1,0 +1,70 @@
+{
+	"Load Data": {
+		"type": "LoadCSVAsDFNode",
+		"children": ["Load Signals"],
+		"output_key": "data",
+		"path_to_csv": "resources/quickstart_tcdvoip.csv"
+	},
+	"Load Signals": {
+    	"type": "TransformNode",
+    	"transform_name": "apply_function",
+    	"children": ["Perform VAD"],
+    	"target_key": "data",
+    	"function_args": {
+    	    "signal_col": "Ref_Wave",
+    	    "output_col": "signal",
+    	    "function_name": "load_signal",
+    	    "mono": "False",
+    	    "target_sample_rate": 16000
+    	}
+	},
+	"Perform VAD": {
+        "type": "TransformNode",
+        "children": ["Perturp One", "Perturp Two", "Perturp Three", "Perturp Four", "Perturp Five"],
+        "transform_name": "apply_function",
+        "target_key": "data",
+        "function_args": {
+            "function_name": "VAD",
+            "signal_col": "signal",
+            "output_col": "vad_signal",
+            "sample_rate": 16000
+        }
+	},
+	"Perturp One": {
+    	"type": "IdentityNode",
+    	"children": ["Sink"]
+	},
+    "Perturp Two": {
+    	"type": "IdentityNode",
+    	"children": ["Sink"]
+	},
+    "Perturp Three": {
+    	"type": "IdentityNode",
+    	"children": ["Sink"]
+	},
+	"Perturp Four": {
+    	"type": "IdentityNode",
+    	"children": ["Sink"]
+	},
+	"Perturp Five": {
+    	"type": "IdentityNode",
+    	"children": ["Sink"]
+	},
+	"Sink": {
+    	"type": "SinkNode",
+    	"num_expected_results": 5,
+        "children": ["Create Spectrograms"]
+	},
+	"Create Spectrograms": {
+    	"type": "IdentityNode",
+    	"children": ["NSIM"]
+	},
+	"NSIM": {
+    	"type": "IdentityNode",
+    	"children": ["Output"]
+	},
+	"Output": {
+    	"type": "IdentityNode"
+	}
+	
+}

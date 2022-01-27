@@ -179,7 +179,10 @@ def _build_visualization_data(ordering: List[Tuple[str, Node]]) -> List:
             # Update the seen_ranges dict
             seen_ranges[index_range] = new_entry
    
-    final_range = list(seen_ranges.keys())[0]
+    seen_ranges_keys = list(seen_ranges.keys())
+    if len(seen_ranges_keys) == 0:
+        return ordering
+    final_range = seen_ranges_keys[0] if seen_ranges_keys else (0, len(ordering))
     final_nested_structure = []
 
     # Prepend nodes not contained within a nested node
@@ -332,7 +335,7 @@ def generate_dot_file(ordering: List[Node]) -> str:
     create_main_edges(graph_data)
 
     last_node = ordering[-1]
-    
+    first_out_of_final_subgraph = None
     # Find first non-nested node after all nested components
     if any(isinstance(entry, list) for entry in graph_data):    
         for i in range(len(graph_data)-1, 0, -1):

@@ -73,35 +73,35 @@ class LoadSignalNode(AQPNode):
         """
         super().execute(result, **kwargs)
         if self.signal_path:
-            audio = self._load_audio_from_path(self.signal_path)
+            audio = load_audio_from_path(self.signal_path, self.target_sample_rate, self.mono)
             result[self.file_name_key] = self.signal_path
         elif self.signal_key:
-            audio = self._load_audio_from_path(result[self.signal_key])
+            audio = load_audio_from_path(result[self.signal_key], self.target_sample_rate, self.mono)
             result[self.file_name_key] = result[self.signal_key]
         result[self.output_key] = audio
         return result
     
     
-    def _load_audio_from_path(self, path: str):
-        """Load the audio signal for the given path.
+def load_audio_from_path(path: str, target_sample_rate: int, mono: bool = False, **kwargs):
+    """Load the audio signal for the given path.
 
-        Parameters
+    Parameters
         ----------
-        path : str
-            The path of the file to load.
+    path : str
+        The path of the file to load.
 
-        Returns
-        -------
-        audio : np.ndarray
-            Numpy array of the audio signal.
+    Returns
+    -------
+    audio : np.ndarray
+        Numpy array of the audio signal.
 
-        """
-        converted_path = Path(path)
-        try:
-            audio = load(converted_path, sr=self.target_sample_rate, mono=self.mono)[0]
-            if not self.mono and audio.ndim == 1:
-                audio = load(converted_path, sr=self.target_sample_rate, mono=True)[0]
-            return audio
-        except(FileNotFoundError) as err:
-            LOGGER.error("%s", err)
-            sys.exit(1)
+    """
+    converted_path = Path(path)
+    try:
+        audio = load(converted_path, sr=target_sample_rate, mono=mono)[0]
+        if not mono and audio.ndim == 1:
+            audio = load(converted_path, sr=target_sample_rate, mono=True)[0]
+        return audio
+    except(FileNotFoundError) as err:
+        LOGGER.error("%s", err)
+        sys.exit(1)

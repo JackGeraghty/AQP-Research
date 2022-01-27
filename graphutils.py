@@ -175,9 +175,9 @@ def check_for_cycles(start_node: Node) -> List[Node]:
     visited = set()
     while len(stack) > 0:
         node = stack.pop()
-        if node.n_id in visited:
-            LOGGER.error("Cycle Detected, node with id %s is referenced to create a cycle", node.id_)            
-            return None
+        # if node.n_id in visited:
+        #     LOGGER.error("Cycle Detected, node with id %s is referenced to create a cycle", node.id_)            
+        #     return None
         visited.add(node.n_id)
         ordering.append(node)
         children = node.children
