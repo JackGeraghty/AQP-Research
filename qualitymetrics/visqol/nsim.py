@@ -3,6 +3,7 @@ import scipy.signal as signal
 
 def nsim_map(deg_specgram: np.ndarray, ref_specgram: np.ndarray, 
              L: int) -> np.ndarray:
+    
     window = np.array([[0.0113, 0.0838, 0.0113], [0.0838, 0.6193, 0.0838], [0.0113, 0.0838, 0.0113]])
     #window = [w/sum(window) for w in window]
         

@@ -95,6 +95,7 @@ def main() -> None:
     graphutils.run_node(root_node, result)
     LOGGER.info("Finished running pipeline.")
     end_time = time.time()
+    print(result['dataframe'].memory_usage(deep=True).sum() / 1e+6)
     LOGGER.info(f'Elapsed time: {end_time - start_time}')
     
 

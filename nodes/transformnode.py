@@ -3,16 +3,21 @@
 These transform functions are relatively short and because of this are contained
 within this single TransformNode. 
 """
-
+import random
 import sys
 import logging
 import pathlib
 import pyvad
+import transforms.perturbations as perturbations
 import numpy as np
-
+import librosa
+import librosa.display
+import pandas as pd
+from multiprocessing import Lock
 from nodes.loadsignalnode import load_audio_from_path
 from .node import AQPNode
 from pipeline import LOGGER_NAME
+from qualitymetrics.visqol.nsim import nsim_map
 
 LOGGER = logging.getLogger(LOGGER_NAME)
 
@@ -46,7 +51,12 @@ def df_columns_to_tuples(result: dict, target_key: str, output_key: str,
         sys.exit(-2)
     df = result[target_key]
     result[output_key] = list(zip(df[col_one], df[col_two]))
-
+    
+    
+def column_to_iterable_entry(result, target_key, output_key, col_name, **kwargs):
+    df = result[target_key]
+    col = df[col_name]
+    result[output_key] = col
 
 def tuple_to_top_level(result: dict, target_key: str, 
                        reference_file_key: str='reference',
@@ -73,6 +83,8 @@ def tuple_to_top_level(result: dict, target_key: str,
     file_names = result[target_key]
     result[reference_file_key] = file_names[0]
     result[degraded_file_key] = file_names[1]
+
+
 
 
 def update_df(result: dict, target_key: str, 
@@ -107,6 +119,18 @@ def update_df(result: dict, target_key: str,
     df.at[index, key] = result[key]
 
 
+def extract_nsim_values(result, target_key, loop_data, value_key, output_col, **kwargs):
+    df= result[target_key]
+    loop_data = result[loop_data]
+    # df[output_col] = ""
+    values = []
+    for key in loop_data:
+        values.append(loop_data[key][value_key])
+        # index = df.index[((df['Ref_Wave'] == key))]
+    df[output_col] = values
+        # df.iloc[index, output_col] = list(values)
+
+
 def to_csv(result: dict, target_key: str, output_file_name: str, **kwargs):
     data = result.get(target_key, None)
     if data is None:
@@ -118,27 +142,65 @@ def to_csv(result: dict, target_key: str, output_file_name: str, **kwargs):
 
 
 def apply_function_to_col(result: dict, target_key: str, output_col: str = None, **kwargs):
+    lock = Lock()
     df = result[target_key]
     modifier_function = SIGNAL_MODIFIERS[kwargs['function_name']]
     output_column = output_col if output_col else kwargs['signal_col']
-    df[output_column] = df[kwargs['signal_col']].apply(modifier_function, **kwargs)
+    try:
+        print(f'Adding column {output_column}')
+        df[output_column] = df[kwargs['signal_col']].apply(modifier_function, **kwargs)
+        lock.acquire()
+        result['data'] = df
+        lock.release()
+    except (BaseException) as ex:
+        print(ex)
     
     
 def scale_by_constant(signal, constant, **kwargs): 
     return signal * constant
 
+def apply_function_to_signal(result, target_key, **kwargs):
+    signal = result[target_key]
+    function = SIGNAL_MODIFIERS[kwargs['function_name']]
+    signal = function(signal, **kwargs)
+    result[target_key] = signal
 
 def perform_vad(signal, sample_rate, **kwargs): 
-    activity = pyvad.split(signal, sample_rate, fs_vad=sample_rate, hop_length=30, vad_mode=3)
-    return np.concatenate([signal[edge[0]:edge[1]] for edge in activity], axis=0)
- 
+    try:
+        activity = pyvad.split(signal, sample_rate, fs_vad=sample_rate, hop_length=30, vad_mode=0)
+        x=  np.concatenate([signal[edge[0]:edge[1]] for edge in activity], axis=0)
+        return x
+    except (BaseException) as ex:
+        print(ex)
+    
+def create_spectrogram(signal, sample_rate, **kwargs): 
+    spect = librosa.feature.melspectrogram(signal, sample_rate)
+    # img = librosa.display.specshow(spect, x_axis='time', y_axis='mel', sr=sample_rate)
+    return spect
+
+
+def apply_func(result, target_key, function_name, **kwargs):
+    func = SIGNAL_MODIFIERS[function_name]
+    data = result[target_key]
+    func(data, **kwargs)
+
+
+def collect_columns_to_matrix(result, target_column_names, row_wise: bool = False, **kwargs):
+    df = result['data']
+    column_series = df[df.columns.intersection(target_column_names)]
+    print(column_series)
+    # print(f'Output matrix shape: {output_matrix.shape}')
+    return None
+
 
 SIGNAL_MODIFIERS = {
         'scale_by_constant': scale_by_constant,
         'add_constant': (lambda signal, constant, **kwargs: signal + constant),
         'load_signal': load_audio_from_path,
-        'VAD': perform_vad
-    }
+        'VAD': perform_vad,
+        '_add_noise': perturbations._add_noise,
+        'create_spectrogram': create_spectrogram
+        }
 
     
 # Used to assign the correct functions during deserialization from JSON.
@@ -147,7 +209,13 @@ FUNCTIONS = {
     'tuple_to_top_level': tuple_to_top_level,
     'update_df': update_df,
     'to_csv':  to_csv,
-    "apply_function": apply_function_to_col
+    "apply_function": apply_function_to_col,
+    "apply_perturbation": perturbations.apply_perturbation,
+    "apply_function_to_signal": apply_function_to_signal,
+    "apply_func": apply_func,
+    'collect_columns_to_matrix': collect_columns_to_matrix,
+    'col_to_iterable_entry': column_to_iterable_entry,
+    'extract_nsim_values': extract_nsim_values
 }
 
 

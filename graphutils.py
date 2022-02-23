@@ -42,6 +42,8 @@ def _deserialize(data: dict, node_id: str) -> Node:
     node.set_n_id(data['n_id'])
     return node
 
+def test(**kwargs):
+    print("Heelo ")
 
 def run_node(node: Node, result: dict, **kwargs):
     """IMPORTANT: Function responsible for running the entire pipeline.
@@ -85,7 +87,6 @@ def run_node(node: Node, result: dict, **kwargs):
         if (r := current_node.execute(result, **kwargs)) is None:
             LOGGER.debug("None result, not continuing with this branch.")
             continue
-
         # If the execute function runs as intended, i.e. doesn't return None,
         # Then add each of the child nodes to the stack to be evaluated.
         for i in range(len(children)-1, -1, -1):
@@ -252,4 +253,4 @@ def validate_graph(root_node: Node) -> Tuple[bool, List[Node]]:
     """
     if (ordering := check_for_cycles(root_node)) is None:
         return False
-    return not has_unreachable_nodes(ordering), ordering
+    return True, ordering

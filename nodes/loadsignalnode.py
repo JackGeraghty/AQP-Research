@@ -2,6 +2,7 @@
 
 import sys
 import logging
+import numpy as np
 
 from .node import AQPNode
 from pathlib import Path
@@ -15,7 +16,7 @@ class LoadSignalNode(AQPNode):
     
     def __init__(self, id_: str, output_key: str, file_name_key: str,
                  signal_path: str=None, signal_key: str=None,
-                 target_sample_rate: int=48000, mono: bool=False, 
+                 target_sample_rate: int=None, mono: bool=False, 
                  draw_options=None, **kwargs):
         """
         Initialize the LoadSignalNode. Only one of either signal_path or signal_key can be used.
@@ -73,16 +74,18 @@ class LoadSignalNode(AQPNode):
         """
         super().execute(result, **kwargs)
         if self.signal_path:
-            audio = load_audio_from_path(self.signal_path, self.target_sample_rate, self.mono)
+            audio, sr = load_audio_from_path(self.signal_path, self.target_sample_rate, self.mono)
             result[self.file_name_key] = self.signal_path
         elif self.signal_key:
-            audio = load_audio_from_path(result[self.signal_key], self.target_sample_rate, self.mono)
+            audio, sr = load_audio_from_path(result[self.signal_key], self.target_sample_rate, self.mono)
             result[self.file_name_key] = result[self.signal_key]
+            
         result[self.output_key] = audio
+        result['sample_rate'] = sr
         return result
     
     
-def load_audio_from_path(path: str, target_sample_rate: int, mono: bool = False, **kwargs):
+def load_audio_from_path(path: str, target_sample_rate: int=None, mono: bool = False, **kwargs):
     """Load the audio signal for the given path.
 
     Parameters
@@ -98,10 +101,10 @@ def load_audio_from_path(path: str, target_sample_rate: int, mono: bool = False,
     """
     converted_path = Path(path)
     try:
-        audio = load(converted_path, sr=target_sample_rate, mono=mono)[0]
+        audio, sr = load(str(converted_path), sr=target_sample_rate, mono=mono)
         if not mono and audio.ndim == 1:
-            audio = load(converted_path, sr=target_sample_rate, mono=True)[0]
-        return audio
+            audio, sr  = load(str(converted_path), sr=target_sample_rate, mono=True)
+        return audio, sr
     except(FileNotFoundError) as err:
         LOGGER.error("%s", err)
         sys.exit(1)

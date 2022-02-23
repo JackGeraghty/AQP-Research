@@ -1,0 +1,179 @@
+{
+	"Load Data": {
+		"type": "LoadCSVAsDFNode",
+		"children": ["Wrangle Data"],
+		"output_key": "dataframe",
+		"path_to_csv": "resources/quickstart_tcdvoip.csv"
+	},
+	"Wrangle Data": {
+		"type": "TransformNode",
+		"children": ["Data Loop"],
+		"transform_name": "col_to_iterable_entry",
+		"output_key": "ref_files",
+		"target_key": "dataframe",
+		"function_args": {
+			"col_name": "Ref_Wave"
+		}
+	},
+	"Data Loop": {
+		"type": "LoopNode",
+		"children": ["Add NSIMs to DF"],
+		"iterable_key": "ref_files",
+		"output_key": "loop_output",
+		"start_node": "Load Signal",
+		"key_blacklist": ["dataframe", "ref_files", "Perturb*", "perturb*"],
+		"node_data": {
+			"Load Signal": {
+				"type": "LoadSignalNode",
+				"children": ["Perform VAD"],
+				"file_name_key": "reference",
+				"signal_key": "iterator_item",
+				"output_key": "reference_signal"
+			},
+			"Perform VAD": {
+				"type": "VoiceMOSVADNode",
+				"children": ["Create Reference Spectrogram"],
+				"target_key": "reference_signal",
+				"output_key": "va_signal"
+
+			},
+			"Create Reference Spectrogram": {
+				"type": "SimpleMelNode",
+				"children": ["Perturb One", "Perturb Two", "Perturb Three", "Perturb Four", "Perturb Five"],
+				"target_key": "va_signal",
+				"output_key": "ref_spect"
+			},
+			"Perturb One": {
+				"type": "PerturbationNode",
+				"children": ["Perturb One Spect"],
+				"snr": 10,
+				"target_key": "va_signal",
+				"output_key": "perturb_one"
+			},
+			"Perturb One Spect": {
+				"type": "SimpleMelNode",
+				"children": ["NSIM One"],
+				"target_key": "perturb_one",
+				"output_key": "perturb_one"
+			},
+			"NSIM One": {
+				"type": "NSIMNode",
+				"children": [],
+				"output_key": "nsim_one",
+				"ref_spect_key": "ref_spect",
+				"test_spect_key": "perturb_one"
+			},
+			"Perturb Two": {
+				"type": "PerturbationNode",
+				"children": ["Perturb Two Spect"],
+				"snr": 10,
+				"target_key": "va_signal",
+				"output_key": "perturb_Two"
+			},
+			"Perturb Two Spect": {
+				"type": "SimpleMelNode",
+				"children": ["NSIM Two"],
+				"target_key": "perturb_Two",
+				"output_key": "perturb_Two"
+			},
+			"NSIM Two": {
+				"type": "NSIMNode",
+				"children": [],
+				"output_key": "nsim_Two",
+				"ref_spect_key": "ref_spect",
+				"test_spect_key": "perturb_Two"
+			},
+			"Perturb Three": {
+				"type": "PerturbationNode",
+				"children": ["Perturb Three Spect"],
+				"snr": 10,
+				"target_key": "va_signal",
+				"output_key": "perturb_Three"
+			},
+			"Perturb Three Spect": {
+				"type": "SimpleMelNode",
+				"children": ["NSIM Three"],
+				"target_key": "perturb_Three",
+				"output_key": "perturb_Three"
+			},
+			"NSIM Three": {
+				"type": "NSIMNode",
+				"children": [],
+				"output_key": "nsim_Three",
+				"ref_spect_key": "ref_spect",
+				"test_spect_key": "perturb_Three"
+			},
+			"Perturb Four": {
+				"type": "PerturbationNode",
+				"children": ["Perturb Four Spect"],
+				"snr": 10,
+				"target_key": "va_signal",
+				"output_key": "perturb_Four"
+			},
+			"Perturb Four Spect": {
+				"type": "SimpleMelNode",
+				"children": ["NSIM Four"],
+				"target_key": "perturb_Four",
+				"output_key": "perturb_Four"
+			},
+			"NSIM Four": {
+				"type": "NSIMNode",
+				"children": [],
+				"output_key": "nsim_Four",
+				"ref_spect_key": "ref_spect",
+				"test_spect_key": "perturb_Four"
+			},
+			"Perturb Five": {
+				"type": "PerturbationNode",
+				"children": ["Perturb Five Spect"],
+				"snr": 10,
+				"target_key": "va_signal",
+				"output_key": "perturb_Five"
+			},
+			"Perturb Five Spect": {
+				"type": "SimpleMelNode",
+				"children": ["NSIM Five"],
+				"target_key": "perturb_Five",
+				"output_key": "perturb_Five"
+			},
+			"NSIM Five": {
+				"type": "NSIMNode",
+				"children": ["Join NSIMS"],
+				"output_key": "nsim_Five",
+				"ref_spect_key": "ref_spect",
+				"test_spect_key": "perturb_Five"
+			},
+			"Join NSIMS": {
+				"type": "GatherNode",
+				"children": [],
+				"keys_to_gather": ["nsim_one", "nsim_Two", "nsim_Three", "nsim_Four", "nsim_Five"],
+				"output_key": "nsim_values"
+			}
+		}
+	},
+    "Add NSIMs to DF": {
+        "type": "TransformNode",
+        "children": ["DF to csv"],
+        "transform_name": "extract_nsim_values",
+        "target_key": "dataframe",
+        "function_args": {
+            "loop_data": "loop_output",
+            "output_col": "All NSIMs",
+            "value_key": "nsim_values"
+        }
+    },
+	"DF to csv": {
+		"type": "TransformNode",
+		"children": ["id"],
+		"transform_name": "to_csv",
+		"target_key": "dataframe",
+		"function_args": {
+			"output_file_name": "results/RESULTS.csv"
+		}
+	},
+	"id": {
+    	"type": "IdentityNode",
+    	"children": []
+	}
+
+}

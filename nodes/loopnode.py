@@ -2,7 +2,7 @@
 
 import logging
 import graphutils
-
+import re
 from .node import NestedNode
 from constants import LOGGER_NAME
 
@@ -41,7 +41,7 @@ class LoopNode(NestedNode):
         self.iterable_key = iterable_key
         self.nodes = graphutils.build_graph(node_data)
         self.execution_node = self.nodes[start_node]
-        self.key_blacklist = key_blacklist if key_blacklist else []
+        self.key_blacklist = [re.compile(k) for k in key_blacklist]if key_blacklist else []
         self.keys_to_keep = keys_to_keep
         self.type_ = 'LoopNode'
         
@@ -71,7 +71,17 @@ class LoopNode(NestedNode):
         results = {}
         for i in result[self.iterable_key]:
             LOGGER.info("Running on iterable entry: %s", i)
-            result_copy = {k: result[k] for k in result if k not in self.key_blacklist}
+            result_copy = {}
+            for k in result:
+                matched=False
+                for pattern in self.key_blacklist:
+                    if pattern.match(k):
+                        matched = True
+                        break
+                if not matched:
+                    result_copy[k] = result[k]
+                        
+            # result_copy = {k: result[k] for k in result if k not in self.key_blacklist}
             result_copy['iterator_item'] = i
             graphutils.run_node(self.execution_node, result_copy)
             results[i] = result_copy

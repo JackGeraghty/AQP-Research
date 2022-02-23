@@ -6,65 +6,210 @@
 		"path_to_csv": "resources/quickstart_tcdvoip.csv"
 	},
 	"Load Signals": {
-    	"type": "TransformNode",
-    	"transform_name": "apply_function",
-    	"children": ["Perform VAD"],
-    	"target_key": "data",
-    	"function_args": {
-    	    "signal_col": "Ref_Wave",
-    	    "output_col": "signal",
-    	    "function_name": "load_signal",
-    	    "mono": "False",
-    	    "target_sample_rate": 16000
-    	}
+		"type": "TransformNode",
+		"transform_name": "apply_function",
+		"children": ["Perform VAD"],
+		"target_key": "data",
+		"function_args": {
+			"signal_col": "Ref_Wave",
+			"output_col": "signal",
+			"function_name": "load_signal",
+			"mono": "False"
+		}
 	},
 	"Perform VAD": {
-        "type": "TransformNode",
-        "children": ["Perturp One", "Perturp Two", "Perturp Three", "Perturp Four", "Perturp Five"],
-        "transform_name": "apply_function",
-        "target_key": "data",
-        "function_args": {
-            "function_name": "VAD",
-            "signal_col": "signal",
-            "output_col": "vad_signal",
-            "sample_rate": 16000
-        }
+		"type": "TransformNode",
+		"children": ["Spectrogram"],
+		"transform_name": "apply_function",
+		"target_key": "data",
+		"function_args": {
+			"function_name": "VAD",
+			"signal_col": "signal",
+			"output_col": "vad_signal",
+			"sample_rate": 16000
+		}
 	},
-	"Perturp One": {
-    	"type": "IdentityNode",
-    	"children": ["Sink"]
+	"Spectrogram": {
+		"type": "TransformNode",
+		"children": ["Perturb"],
+		"transform_name": "apply_function",
+		"target_key": "data",
+		"function_args": {
+			"function_name": "create_spectrogram",
+			"signal_col": "vad_signal",
+			"sample_rate": 16000,
+			"output_col": "original_spect"
+		}
 	},
-    "Perturp Two": {
-    	"type": "IdentityNode",
-    	"children": ["Sink"]
-	},
-    "Perturp Three": {
-    	"type": "IdentityNode",
-    	"children": ["Sink"]
-	},
-	"Perturp Four": {
-    	"type": "IdentityNode",
-    	"children": ["Sink"]
-	},
-	"Perturp Five": {
-    	"type": "IdentityNode",
-    	"children": ["Sink"]
-	},
-	"Sink": {
-    	"type": "SinkNode",
-    	"num_expected_results": 5,
-        "children": ["Create Spectrograms"]
-	},
-	"Create Spectrograms": {
-    	"type": "IdentityNode",
-    	"children": ["NSIM"]
+	"Perturb": {
+		"type": "MultiNode",
+		"children": ["NSIM"],
+		"root_nodes": ["Perturb One" , "Perturb Two", "Perturb Three", "Perturb Four", "Perturb Five"],
+		"node_data": {
+			"Perturb One": {
+				"type": "TransformNode",
+				"children": ["Spectrogram One"],
+				"transform_name": "apply_function",
+				"target_key": "data",
+				"function_args": {
+					"signal_col": "vad_signal",
+					"function_name": "_add_noise",
+					"output_col": "perturb_one",
+					"snr": 10
+				}
+			},
+			"Spectrogram One": {
+				"type": "TransformNode",
+				"children": ["NSIM One"],
+				"transform_name": "apply_function",
+				"target_key": "data",
+				"function_args": {
+					"function_name": "create_spectrogram",
+					"signal_col": "perturb_one",
+					"sample_rate": 16000
+				}
+			},
+			"NSIM One": {
+				"type": "NSIMNode",
+				"children": [],
+				"output_key": "nsim one",
+				"ref_spect_key": "original_spect",
+				"test_spect_key": "perturb_one"
+			},
+			"Perturb Two": {
+				"type": "TransformNode",
+				"children": ["Spectrogram Two"],
+				"transform_name": "apply_function",
+				"target_key": "data",
+				"function_args": {
+					"signal_col": "vad_signal",
+					"function_name": "_add_noise",
+					"output_col": "perturb_two",
+					"snr": 20
+				}
+			},
+			"Spectrogram Two": {
+				"type": "TransformNode",
+				"children": ["NSIM Two"],
+				"transform_name": "apply_function",
+				"target_key": "data",
+				"function_args": {
+					"function_name": "create_spectrogram",
+					"signal_col": "perturb_two",
+					"sample_rate": 16000
+				}
+			},
+			"NSIM Two": {
+				"type": "NSIMNode",
+				"children": [],
+				"output_key": "nsim two",
+				"ref_spect_key": "original_spect",
+				"test_spect_key": "perturb_two"
+			},
+            "Perturb Three": {
+                "type": "TransformNode",
+                "children": ["Spectrogram Three"],
+                "transform_name": "apply_function",
+                "target_key": "data",
+                "function_args": {
+                    "function_name": "_add_noise",
+                    "signal_col": "vad_signal",
+                    "snr": 30,
+                    "output_col": "perturb_three"
+                }
+            },
+            "Spectrogram Three": {
+                "type": "TransformNode",
+                "children": ["NSIM Three"],
+                "transform_name": "apply_function",
+                "target_key": "data",
+                "function_args": {
+                    "function_name": "create_spectrogram",
+                    "signal_col": "perturb_three",
+                    "sample_rate": 16000
+                }
+            },
+            "NSIM Three": {
+                "type": "NSIMNode",
+                "children": [],
+                "output_key": "nsim three",
+                "ref_spect_key": "original_spect",
+                "test_spect_key": "perturb_three"
+            },
+            "Perturb Four": {
+                "type": "TransformNode",
+                "children": ["Spectrogram Four"],
+                "transform_name": "apply_function",
+                "target_key": "data",
+                "function_args": {
+                    "function_name": "_add_noise",
+                    "signal_col": "vad_signal",
+                    "snr": -10,
+                    "output_col": "perturb_four"
+                }
+            },
+            "Spectrogram Four": {
+                "type": "TransformNode",
+                "children": ["NSIM Four"],
+                "transform_name": "apply_function",
+                "target_key": "data",
+                "function_args": {
+                    "function_name": "create_spectrogram",
+                    "signal_col": "perturb_four",
+                    "sample_rate": 16000
+                }
+            },
+            "NSIM Four": {
+                "type": "NSIMNode",
+                "children": [],
+                "output_key": "nsim four",
+                "ref_spect_key": "original_spect",
+                "test_spect_key": "perturb_four"
+            },
+            "Perturb Five": {
+                "type": "TransformNode",
+                "children": ["Spectrogram Five"],
+                "transform_name": "apply_function",
+                "target_key": "data",
+                "function_args": {
+                    "function_name": "_add_noise",
+                    "signal_col": "vad_signal",
+                    "snr": -20,
+                    "output_col": "perturb_five"
+                }
+            },
+            "Spectrogram Five": {
+                "type": "TransformNode",
+                "children": ["NSIM Five"],
+                "transform_name": "apply_function",
+                "target_key": "data",
+                "function_args": {
+                    "function_name": "create_spectrogram",
+                    "signal_col": "perturb_five",
+                    "sample_rate": 16000
+                }
+            },
+            "NSIM Five": {
+                "type": "NSIMNode",
+                "children": [],
+                "output_key": "nsim five",
+                "ref_spect_key": "original_spect",
+                "test_spect_key": "perturb_five"
+            }
+		}
 	},
 	"NSIM": {
-    	"type": "IdentityNode",
-    	"children": ["Output"]
+		"type": "TransformNode",
+		"children": ["Output"],
+		"transform_name": "collect_columns_to_matrix",
+		"target_key": "data",
+		"function_args": {
+    		"target_column_names": ["nsim_one", "nsim_two", "nsim_three", "nsim_four", "nsim_five"],
+			"output_col": "NSIM"
+		}
 	},
 	"Output": {
-    	"type": "IdentityNode"
+		"type": "IdentityNode"
 	}
-	
+
 }
